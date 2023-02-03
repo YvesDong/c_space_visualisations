@@ -85,7 +85,7 @@ a1.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r'))
 robo.set_position((0.25, 0.38))
 robo.get_current_polygon().intersect(obstacles[-1])
 
-x, y, h = np.linspace(0, 1, nx), np.linspace(0, 1, nx), np.linspace(0, 2*np.pi, 2*np.pi*nx)
+x, y, h = np.linspace(0, 1, nx), np.linspace(0, 1, nx), np.linspace(0, 2*np.pi, 2*nx)
 v = np.zeros((len(x), len(y), len(h))) # 3D C-space - 1:blocked; 0:free
 for i,xi in enumerate(x):
     for j, yj in enumerate(y):
