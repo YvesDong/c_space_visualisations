@@ -18,7 +18,7 @@ from rrt_3D.utils3D import getDist, sampleFree, nearest, steer, isCollide, near,
 
 
 class rrtstar():
-    def __init__(self, obstaclemap):
+    def __init__(self, obstaclemap, nx):
         self.env = env()
 
         self.Parent = {}
@@ -27,7 +27,7 @@ class rrtstar():
         self.COST = {}
 
         self.i = 0
-        self.maxiter = 4000 # at least 2000 in this env
+        self.maxiter = 300 # at least 2000 in this env
         self.stepsize = 2
         self.gamma = 7
         self.eta = self.stepsize
@@ -45,6 +45,8 @@ class rrtstar():
         self.offsetBound = self.envUpBound - self.envLowBound
         self.stepLenth = self.offsetBound / self.oMap.shape
         self.normLenth = LA.norm(self.stepLenth)
+
+        self.nx = nx
 
     def wireup(self,x,y):
         # self.E.add_edge([s,y]) # add edge
@@ -68,6 +70,8 @@ class rrtstar():
     def run(self):
         xnew = self.x0
         print('start rrt*... ')
+        starttime = time.time()
+
         self.fig = plt.figure(figsize = (10,8))
         while self.ind < self.maxiter:
             xrand    = sampleFree(self)

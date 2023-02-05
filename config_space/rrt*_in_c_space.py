@@ -33,7 +33,7 @@ plt.rc('text', usetex=True)
 parser = argparse.ArgumentParser(description='Basic visualisation of configuration space for mobile robot')
 parser.add_argument('-nx', type=int, default=30, help='Resolution (n points in each dimension')
 parser.add_argument('-rf', '--robot-footprint', default='config/triangle_robot.csv', help='Robot footprint csv file')
-parser.add_argument('-no', '--n-obstacles', type=int, default=2, help='Number of obstacles')
+parser.add_argument('-no', '--n-obstacles', type=int, default=5, help='Number of obstacles')
 parser.add_argument('-ns', '--n-samples', type=int, default=5, help='Number of sample locations for testing')
 parser.add_argument('-ss', '--std-samples', type=float, default=0.1, help='Sample standard deviation')
 parser.add_argument('--seed', type=int, default=5, help='Numpy random seed')
@@ -48,6 +48,7 @@ np.random.seed(args.seed)
 
 # Generate obstacles (random points then convex hull)
 obs_centres = [poly.Point(*np.random.uniform(size=2)) for i in range(num_obstacles)]
+print("obs_centres ", obs_centres)
 obstacles = []
 for pc in obs_centres:
     px, py = np.random.normal(pc, obs_std, size=(n_obs_samples, 2)).T
@@ -70,21 +71,21 @@ for i in range(200):
     else:
         out_obs.append(p)
 
-f1, a1 = plt.subplots()
-h_obs = []
-for o in obstacles:
-    h_obs.append(PlotPolygon(o, color='lightgrey', zorder=1))
-c_obs = PatchCollection(h_obs)
-a1.add_collection(c_obs)
-a1.scatter(*zip(*in_obs), color='r', marker='x')
-a1.scatter(*zip(*out_obs), color='g', marker='.')
-print("Intersect: {0}".format(obstacles[0].intersect(obstacles[1])))
+# f1, a1 = plt.subplots()
+# h_obs = []
+# for o in obstacles:
+#     h_obs.append(PlotPolygon(o, color='lightgrey', zorder=1))
+# c_obs = PatchCollection(h_obs)
+# a1.add_collection(c_obs)
+# a1.scatter(*zip(*in_obs), color='r', marker='x')
+# a1.scatter(*zip(*out_obs), color='g', marker='.')
+# print("Intersect: {0}".format(obstacles[0].intersect(obstacles[1])))
 
 # Load the robot shape
 robo = robot_tools.Robot2D(footprint_file=args.robot_footprint)
 
 # Now try robot poses:
-a1.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r'))
+# a1.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r'))
 
 robo.set_position((0.25, 0.38))
 robo.get_current_polygon().intersect(obstacles[-1])
@@ -105,18 +106,38 @@ for i,xi in enumerate(x):
             v[i, j, k] = in_obs
 # print(v)
 
-# verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], (h[1]-h[0])*180/np.pi))
-# ax_lims = [[0, x[-1]], [0, y[-1]], [0, h[-1]*180/np.pi]]
+# run rrt
+p = rrtstar(v, nx)
+p.run()
 
-# fig = plt.figure(figsize=(10, 10))
-# ax = fig.add_subplot(111, projection='3d')
-# ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral', lw=1)
-# ax.set_xlim(ax_lims[0])
-# ax.set_ylim(ax_lims[1])
-# ax.set_zlim(ax_lims[2])
-# ax.set_xlabel(r'$x_c$')
-# ax.set_ylabel(r'$y_c$')
-# ax.set_zlabel(r"$\theta (^{\circ})$")
+verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], h[1]-h[0]))
+ax_lims = [[0, x[-1]], [0, y[-1]], [0, h[-1]]]
+
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='3d')
+
+# plot RRT optimal path
+# TODO: wrong overlapping - https://stackoverflow.com/questions/13932150/matplotlib-wrong-overlapping-when-plotting-two-3d-surfaces-on-the-same-axes
+edges = []
+for i in p.Parent:
+    edges.append([i, p.Parent[i]])
+start = p.env.start
+goal = p.env.goal
+draw_line(ax, edges, visibility=0.75, color='g')
+draw_line(ax, p.Path, color='r')
+ax.plot3D(start[0], start[1], start[2], 'go', markersize=7, markeredgecolor='k')
+ax.plot3D(goal[0], goal[1], goal[2], 'ro', markersize=7, markeredgecolor='k')
+
+# plot obstacle surface
+# TODO: donut instead of cube in RRT
+# ax.scatter3D(verts[:, 0], verts[:, 1], verts[:, 2], cmap='Spectral', edgecolor='none')
+ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral', lw=1)
+ax.set_xlim(ax_lims[0])
+ax.set_ylim(ax_lims[1])
+ax.set_zlim(ax_lims[2])
+ax.set_xlabel(r'$x_c$')
+ax.set_ylabel(r'$y_c$')
+ax.set_zlabel(r"$\theta (^{\circ})$")
 
 # robo.set_position([0.1, 0.1])
 # f2, a2 = plt.subplots(2, 2)
@@ -138,9 +159,4 @@ for i,xi in enumerate(x):
 #     ani.save('fig/config_space_rotation.mp4', writer='ffmpeg', fps=int(15),
 #                        extra_args=["-crf", "18", "-profile:v", "main", "-tune", "animation", "-pix_fmt", "yuv420p"])
 
-# plt.show()
-
-# run rrt
-p = rrtstar(v)
-starttime = time.time()
-p.run()
+plt.show()

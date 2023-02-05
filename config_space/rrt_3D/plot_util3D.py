@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import mpl_toolkits.mplot3d as plt3d
 from mpl_toolkits.mplot3d import proj3d
 import numpy as np
+from skimage import measure
 
 
 def CreateSphere(center, r):
@@ -55,19 +56,19 @@ def obb_verts(obb):
     return verts
 
 
-def draw_obb(ax, OBB, color=None, alpha=0.15):
-    f = np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [0, 1, 2, 3], [4, 5, 6, 7]])
-    n = OBB.shape[0]
-    vl = np.zeros((8 * n, 3))
-    fl = np.zeros((6 * n, 4), dtype='int64')
-    for k in range(n):
-        vl[k * 8:(k + 1) * 8, :] = obb_verts(OBB[k])
-        fl[k * 6:(k + 1) * 6, :] = f + k * 8
-    if type(ax) is Poly3DCollection:
-        ax.set_verts(vl[fl])
-    else:
-        h = ax.add_collection3d(Poly3DCollection(vl[fl], facecolors='black', alpha=alpha, linewidths=1, edgecolors='k'))
-        return h
+# def draw_obb(ax, OBB, color=None, alpha=0.15):
+#     f = np.array([[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [0, 1, 2, 3], [4, 5, 6, 7]])
+#     n = OBB.shape[0]
+#     vl = np.zeros((8 * n, 3))
+#     fl = np.zeros((6 * n, 4), dtype='int64')
+#     for k in range(n):
+#         vl[k * 8:(k + 1) * 8, :] = obb_verts(OBB[k])
+#         fl[k * 6:(k + 1) * 6, :] = f + k * 8
+#     if type(ax) is Poly3DCollection:
+#         ax.set_verts(vl[fl])
+#     else:
+#         h = ax.add_collection3d(Poly3DCollection(vl[fl], facecolors='black', alpha=alpha, linewidths=1, edgecolors='k'))
+#         return h
 
 
 def draw_line(ax, SET, visibility=1, color=None):
@@ -80,36 +81,37 @@ def draw_line(ax, SET, visibility=1, color=None):
             ax.add_line(line)
 
 
-def visualization(initparams):
-    if initparams.ind % 100 == 0 or initparams.done:
+def visualization(params):
+    if params.ind % 100 == 0 or params.done:
         #----------- list structure
-        # V = np.array(list(initparams.V))
-        # E = initparams.E
+        # V = np.array(list(params.V))
+        # E = params.E
         #----------- end
-        # edges = initparams.E
-        Path = np.array(initparams.Path)
-        start = initparams.env.start
-        goal = initparams.env.goal
+        # edges = params.E
+        Path = np.array(params.Path)
+        start = params.env.start
+        goal = params.env.goal
         # edges = E.get_edge()
         #----------- list structure
         edges = []
-        for i in initparams.Parent:
-            edges.append([i,initparams.Parent[i]])
+        for i in params.Parent:
+            edges.append([i,params.Parent[i]])
         #----------- end
+
         # generate axis objects
         ax = plt.subplot(111, projection='3d')
         
         # ax.view_init(elev=0.+ 0.03*initparams.ind/(2*np.pi), azim=90 + 0.03*initparams.ind/(2*np.pi))
         # ax.view_init(elev=0., azim=90.)
-        ax.view_init(elev=65., azim=60.)
+        # ax.view_init(elev=65., azim=60.)
         # ax.view_init(elev=-8., azim=180)
         ax.clear()
         # drawing objects
-        draw_Spheres(ax, initparams.env.balls)
-        draw_block_list(ax, initparams.env.blocks)
-        if initparams.env.OBB is not None:
-            draw_obb(ax, initparams.env.OBB)
-        draw_block_list(ax, np.array([initparams.env.boundary]), alpha=0)
+        # draw_Spheres(ax, initparams.env.balls)
+        # draw_block_list(ax, initparams.env.blocks)
+        # if initparams.env.OBB is not None:
+        #     draw_obb(ax, initparams.env.OBB)
+        draw_block_list(ax, np.array([params.env.boundary]), alpha=0)
         draw_line(ax, edges, visibility=0.75, color='g')
         draw_line(ax, Path, color='r')
         # if len(V) > 0:
