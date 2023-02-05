@@ -3,6 +3,7 @@ This is rrt star code for 3D
 @author: yue qi
 """
 import numpy as np
+from numpy import linalg as LA
 from numpy.matlib import repmat
 from collections import defaultdict
 import time
@@ -17,7 +18,7 @@ from rrt_3D.utils3D import getDist, sampleFree, nearest, steer, isCollide, near,
 
 
 class rrtstar():
-    def __init__(self):
+    def __init__(self, obstaclemap):
         self.env = env()
 
         self.Parent = {}
@@ -37,6 +38,14 @@ class rrtstar():
 
         self.V.append(self.x0)
         self.ind = 0
+
+        self.oMap = obstaclemap
+        self.envLowBound = self.env.boundary[0:3]
+        self.envUpBound = self.env.boundary[3:6]
+        self.offsetBound = self.envUpBound - self.envLowBound
+        self.stepLenth = self.offsetBound / self.oMap.shape
+        self.normLenth = LA.norm(self.stepLenth)
+
     def wireup(self,x,y):
         # self.E.add_edge([s,y]) # add edge
         self.Parent[x] = y

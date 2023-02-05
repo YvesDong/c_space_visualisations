@@ -37,132 +37,56 @@ def getDist(pos1, pos2):
 
 '''
 
-
-def sampleFree(initparams, bias = 0.1):
+def sampleFree(params):
     '''biased sampling'''
-    x = np.random.uniform(initparams.env.boundary[0:3], initparams.env.boundary[3:6])
+    p = np.random.uniform(params.env.boundary[0:3], params.env.boundary[3:6])
     i = np.random.random()
-    if isinside(initparams, x):
-        return sampleFree(initparams)
+    if isinside(params, p):
+        return sampleFree(params)
     else:
-        if i < bias:
-            return np.array(initparams.xt) + 1
-        else:
-            return x
-        return x
+        # if i < bias:
+        #     return np.array(initparams.xt) + 1
+        # else:
+        #     return x
+        return p
 
 # ---------------------- Collision checking algorithms
-def isinside(initparams, x):
+def isinside(params, p, thres=.05):
     '''see if inside obstacle'''
-    for i in initparams.env.blocks:
-        if isinbound(i, x):
-            return True
-    for i in initparams.env.OBB:
-        if isinbound(i, x, mode = 'obb'):
-            return True
-    for i in initparams.env.balls:
-        if isinball(i, x):
-            return True
-    return False
+    oMap = params.oMap
+    normp = (p-params.envLowBound) / (params.envUpBound-params.envLowBound) # normalized p
+    oMapShape = oMap.shape
 
-def isinbound(i, x, mode = False, factor = 0, isarray = False):
-    if mode == 'obb':
-        return isinobb(i, x, isarray)
-    if isarray:
-        compx = (i[0] - factor <= x[:,0]) & (x[:,0] < i[3] + factor) 
-        compy = (i[1] - factor <= x[:,1]) & (x[:,1] < i[4] + factor) 
-        compz = (i[2] - factor <= x[:,2]) & (x[:,2] < i[5] + factor) 
-        return compx & compy & compz
-    else:    
-        return i[0] - factor <= x[0] < i[3] + factor and i[1] - factor <= x[1] < i[4] + factor and i[2] - factor <= x[2] < i[5]
+    # limits for iterations
+    # TODO: cube neighbor to sphere
+    limLow = np.maximum(normp-thres, np.zeros((3)))
+    limUp = np.minimum(normp+thres, np.ones((3)))
+    limLow = np.floor(limLow*oMapShape).astype(int)
+    limUp = np.floor(limUp*oMapShape).astype(int)
+    # print(limLow, limUp)
 
-def isinobb(i, x, isarray = False):
-    # transform the point from {W} to {body}
-    if isarray:
-        pts = (i.T@np.column_stack((x, np.ones(len(x)))).T).T[:,0:3]
-        block = [- i.E[0],- i.E[1],- i.E[2],+ i.E[0],+ i.E[1],+ i.E[2]]
-        return isinbound(block, pts, isarray = isarray)
-    else:
-        pt = i.T@np.append(x,1)
-        block = [- i.E[0],- i.E[1],- i.E[2],+ i.E[0],+ i.E[1],+ i.E[2]]
-        return isinbound(block, pt)
-
-def isinball(i, x, factor = 0):
-    if getDist(i[0:3], x) <= i[3] + factor:
+    # detect in a neighbor cube
+    oMapNeighbor = oMap[limLow[0]:limUp[0],limLow[1]:limUp[1],limLow[2]:limUp[2]]
+    if np.amax(oMapNeighbor):
         return True
+
     return False
 
-def lineSphere(p0, p1, ball):
-    # https://cseweb.ucsd.edu/classes/sp19/cse291-d/Files/CSE291_13_CollisionDetection.pdf
-    c, r = ball[0:3], ball[-1]
-    line = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]]
-    d1 = [c[0] - p0[0], c[1] - p0[1], c[2] - p0[2]]
-    t = (1 / (line[0] * line[0] + line[1] * line[1] + line[2] * line[2])) * (
-                line[0] * d1[0] + line[1] * d1[1] + line[2] * d1[2])
-    if t <= 0:
-        if (d1[0] * d1[0] + d1[1] * d1[1] + d1[2] * d1[2]) <= r ** 2: return True
-    elif t >= 1:
-        d2 = [c[0] - p1[0], c[1] - p1[1], c[2] - p1[2]]
-        if (d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2]) <= r ** 2: return True
-    elif 0 < t < 1:
-        x = [p0[0] + t * line[0], p0[1] + t * line[1], p0[2] + t * line[2]]
-        k = [c[0] - x[0], c[1] - x[1], c[2] - x[2]]
-        if (k[0] * k[0] + k[1] * k[1] + k[2] * k[2]) <= r ** 2: return True
-    return False
-
-def lineAABB(p0, p1, dist, aabb):
-    # https://www.gamasutra.com/view/feature/131790/simple_intersection_tests_for_games.php?print=1
-    # aabb should have the attributes of P, E as center point and extents
-    mid = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2]  # mid point
-    I = [(p1[0] - p0[0]) / dist, (p1[1] - p0[1]) / dist, (p1[2] - p0[2]) / dist]  # unit direction
-    hl = dist / 2  # radius
-    T = [aabb.P[0] - mid[0], aabb.P[1] - mid[1], aabb.P[2] - mid[2]]
-    # do any of the principal axis form a separting axis?
-    if abs(T[0]) > (aabb.E[0] + hl * abs(I[0])): return False
-    if abs(T[1]) > (aabb.E[1] + hl * abs(I[1])): return False
-    if abs(T[2]) > (aabb.E[2] + hl * abs(I[2])): return False
-    # I.cross(s axis) ?
-    r = aabb.E[1] * abs(I[2]) + aabb.E[2] * abs(I[1])
-    if abs(T[1] * I[2] - T[2] * I[1]) > r: return False
-    # I.cross(y axis) ?
-    r = aabb.E[0] * abs(I[2]) + aabb.E[2] * abs(I[0])
-    if abs(T[2] * I[0] - T[0] * I[2]) > r: return False
-    # I.cross(z axis) ?
-    r = aabb.E[0] * abs(I[1]) + aabb.E[1] * abs(I[0])
-    if abs(T[0] * I[1] - T[1] * I[0]) > r: return False
-
-    return True
-
-def lineOBB(p0, p1, dist, obb):
-    # transform points to obb frame
-    res = obb.T@np.column_stack([np.array([p0,p1]),[1,1]]).T 
-    # record old position and set the position to origin
-    oldP, obb.P= obb.P, [0,0,0] 
-    # calculate segment-AABB testing
-    ans = lineAABB(res[0:3,0],res[0:3,1],dist,obb)
-    # reset the position
-    obb.P = oldP 
-    return ans
-
-def isCollide(initparams, x, child, dist=None):
+def isCollide(params, p1, p2, dist=None):
     '''see if line intersects obstacle'''
     '''specified for expansion in A* 3D lookup table'''
     if dist==None:
-        dist = getDist(x, child)
+        dist = getDist(p1, p2)
+    # print('dist: ', dist)
+    
     # check in bound
-    if not isinbound(initparams.env.boundary, child): 
-        return True, dist
-    # check collision in AABB
-    for i in range(len(initparams.env.AABB)):
-        if lineAABB(x, child, dist, initparams.env.AABB[i]): 
-            return True, dist
-    # check collision in ball
-    for i in initparams.env.balls:
-        if lineSphere(x, child, i): 
-            return True, dist
-    # check collision with obb
-    for i in initparams.env.OBB:
-        if lineOBB(x, child, dist, i):
+    # TODO: avoid repeat calculation
+    nsample = np.ceil(dist/params.normLenth).astype(int)
+    # print('nsample: ', nsample)
+    vec = np.asarray(p2) - np.asarray(p1)
+    for i in range(nsample+1):
+        currp = p1 + i/nsample*vec
+        if isinside(params, currp):
             return True, dist
     return False, dist
 
