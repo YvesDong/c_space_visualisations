@@ -16,6 +16,7 @@ from plot_tools.surf_rotation_animation import TrisurfRotationAnimator
 from rrt_3D.env3D import env
 from rrt_3D.utils3D import getDist, sampleFree, nearest, steer, isCollide, near, visualization, cost, path
 from rrt_3D.rrt_star3D import rrtstar
+from rrt_3D.FMT_star3D import *
 from rrt_3D.plot_util3D import *
 """ 
 
@@ -115,41 +116,8 @@ for i,xi in enumerate(x):
                     in_obs = 1.0
                     break
             v[i, j, k] = in_obs
-# print(v)
 
-# run rrt
-p = rrtstar(v, nx)
-p.run()
-
-verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], h[1]-h[0]))
-ax_lims = [[0, x[-1]], [0, y[-1]], [0, h[-1]]]
-
-fig = plt.figure(figsize=(10, 10))
-ax = fig.add_subplot(111, projection='3d')
-
-# plot RRT optimal path
-# TODO: wrong overlapping - https://stackoverflow.com/questions/13932150/matplotlib-wrong-overlapping-when-plotting-two-3d-surfaces-on-the-same-axes
-edges = []
-for i in p.Parent:
-    edges.append([i, p.Parent[i]])
-start = p.env.start
-goal = p.env.goal
-draw_line(ax, edges, visibility=0.75, color='g')
-draw_line(ax, p.Path, color='r')
-ax.plot3D(start[0], start[1], start[2], 'go', markersize=7, markeredgecolor='k')
-ax.plot3D(goal[0], goal[1], goal[2], 'ro', markersize=7, markeredgecolor='k')
-
-# plot obstacle surface
-# TODO: donut instead of cube in RRT
-ax.scatter3D(verts[:, 0], verts[:, 1], verts[:, 2], cmap='Spectral', edgecolor='none')
-# ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral', lw=1)
-ax.set_xlim(ax_lims[0])
-ax.set_ylim(ax_lims[1])
-ax.set_zlim(ax_lims[2])
-ax.set_xlabel(r'$x_c$')
-ax.set_ylabel(r'$y_c$')
-ax.set_zlabel(r"$\theta (^{\circ})$")
-
+# plot 2*2 c-space construction
 robo.set_position([0.2, 0.2])
 f2, a2 = plt.subplots(2, 2)
 for i, ax in enumerate(a2.flat):
@@ -162,12 +130,72 @@ for i, ax in enumerate(a2.flat):
     ax.set_title(r"$\theta = {0:0.1f}$".format(h[dex]*180/np.pi))
     ax.tick_params(top=0, left=0)
 
-if args.animation:
-    rotator = TrisurfRotationAnimator(verts, faces, ax_lims=ax_lims, delta_angle=5.0,
-                                      x_label=r'$x_c$', y_label=r'$y_c$', z_label=r"$\theta (^{\circ})$")
-    ani = animation.FuncAnimation(rotator.f, rotator.update, 72, init_func=rotator.init, interval=10, blit=False)
-    # ani.save('fig/config_space_rotation.gif', writer='imagemagick', fps=15)
-    ani.save('fig/config_space_rotation.mp4', writer='ffmpeg', fps=int(15),
-                       extra_args=["-crf", "18", "-profile:v", "main", "-tune", "animation", "-pix_fmt", "yuv420p"])
+# run rrt
+# p = rrtstar(v, nx)
+# p.run()
+rrt = FMT_star(v, nx, radius = 1, n = 600)
+rrt.FMTrun()
 
+# plot RRT optimal path
+# TODO: wrong overlapping - https://stackoverflow.com/questions/13932150/matplotlib-wrong-overlapping-when-plotting-two-3d-surfaces-on-the-same-axes
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='3d')
+
+edges = []
+for i in rrt.Parent:
+    edges.append([i, rrt.Parent[i]])
+start = rrt.env.start
+goal = rrt.env.goal
+draw_line(ax, edges, visibility=0.75, color='g')
+draw_line(ax, rrt.Path, color='r')
+ax.plot3D(start[0], start[1], start[2], 'go', markersize=7, markeredgecolor='k')
+ax.plot3D(goal[0], goal[1], goal[2], 'ro', markersize=7, markeredgecolor='k')
+
+# plot obstacle surface
+# TODO: donut instead of cube in RRT
+verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], h[1]-h[0]))
+ax_lims = [[0, x[-1]], [0, y[-1]], [0, h[-1]]]
+ax.scatter3D(verts[:, 0], verts[:, 1], verts[:, 2], edgecolor='k')
+# ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral', lw=1)
+ax.set_xlim(ax_lims[0])
+ax.set_ylim(ax_lims[1])
+ax.set_zlim(ax_lims[2])
+ax.set_xlabel(r'$x_c$')
+ax.set_ylabel(r'$y_c$')
+ax.set_zlabel(r"$\theta (rad)$")
 plt.show()
+
+# plot escape animation
+ax1 = plt.subplot(111)
+niter = 10
+i = len(rrt.Path)
+while i >= 0:
+    j = 1
+    k = i - 1
+    if i == 0:
+        j = 0
+        k = 0
+    currAngle = rrt.Path[k][j][2]
+    currPos = rrt.Path[k][j][:2]
+    # dex = int(currAngle/niter*(len(h)-1))
+    ax1.clear()
+    ax1.matshow(v[:, :, dex].transpose(), origin='lower', extent=[0, 1, 0, 1], cmap='Greys')
+    ax1.add_collection(PatchCollection(copy.copy(h_obs)))
+    robo.set_position(currPos)
+    robo.set_heading(currAngle)
+    ax1.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r'))
+    ax1.plot(*robo.position, color='g', marker='x')
+    ax1.set_title(r"$\theta = {0:0.1f}$ rad".format(currAngle))
+    ax1.tick_params(top=0, left=0)
+    plt.pause(2)
+    i -= 1
+plt.show()
+
+# if args.animation:
+#     rotator = TrisurfRotationAnimator(verts, faces, ax_lims=ax_lims, delta_angle=5.0,
+#                                       x_label=r'$x_c$', y_label=r'$y_c$', z_label=r"$\theta (^{\circ})$")
+#     ani = animation.FuncAnimation(rotator.f, rotator.update, 72, init_func=rotator.init, interval=10, blit=False)
+#     # ani.save('fig/config_space_rotation.gif', writer='imagemagick', fps=15)
+#     ani.save('fig/config_space_rotation.mp4', writer='ffmpeg', fps=int(15),
+#                        extra_args=["-crf", "18", "-profile:v", "main", "-tune", "animation", "-pix_fmt", "yuv420p"])
+

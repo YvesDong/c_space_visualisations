@@ -40,13 +40,13 @@ class rrtstar():
         self.ind = 0
 
         self.oMap = obstaclemap
+        self.nx = nx
         self.envLowBound = self.env.boundary[0:3]
         self.envUpBound = self.env.boundary[3:6]
         self.offsetBound = self.envUpBound - self.envLowBound
         self.stepLenth = self.offsetBound / self.oMap.shape
         self.normLenth = LA.norm(self.stepLenth)
 
-        self.nx = nx
 
     def wireup(self,x,y):
         # self.E.add_edge([s,y]) # add edge
