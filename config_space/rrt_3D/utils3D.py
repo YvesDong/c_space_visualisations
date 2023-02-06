@@ -15,11 +15,11 @@ def getRay(x, y):
     return np.array([x, direc])
 
 
-def getAABB(blocks):
-    AABB = []
-    for i in blocks:
-        AABB.append(np.array([np.add(i[0:3], -0), np.add(i[3:6], 0)]))  # make AABBs alittle bit of larger
-    return AABB
+# def getAABB(blocks):
+#     AABB = []
+#     for i in blocks:
+#         AABB.append(np.array([np.add(i[0:3], -0), np.add(i[3:6], 0)]))  # make AABBs alittle bit of larger
+#     return AABB
 
 
 def getDist(pos1, pos2):
@@ -51,7 +51,7 @@ def sampleFree(params):
         return p
 
 # ---------------------- Collision checking algorithms
-def isinside(params, p, thres=.05):
+def isinside(params, p, thres=.03):
     '''see if inside obstacle'''
     oMap = params.oMap
     normp = (p-params.envLowBound) / (params.envUpBound-params.envLowBound) # normalized p
