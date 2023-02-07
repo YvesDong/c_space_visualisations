@@ -16,7 +16,8 @@ from plot_tools.surf_rotation_animation import TrisurfRotationAnimator
 from rrt_3D.env3D import env
 from rrt_3D.utils3D import getDist, sampleFree, nearest, steer, isCollide, near, visualization, cost, path
 from rrt_3D.rrt_star3D import rrtstar
-from rrt_3D.FMT_star3D import *
+# from rrt_3D.FMT_star3D import *
+from rrt_3D.FMT_star3D_potential import *
 from rrt_3D.plot_util3D import *
 """ 
 
@@ -32,7 +33,7 @@ plt.rc('font', **{'family': 'serif', 'sans-serif': ['Computer Modern Roman']})
 plt.rc('text', usetex=True)
 
 parser = argparse.ArgumentParser(description='Basic visualisation of configuration space for mobile robot')
-parser.add_argument('-nx', type=int, default=50, help='Resolution (n points in each dimension')
+parser.add_argument('-nx', type=int, default=40, help='Resolution (n points in each dimension')
 parser.add_argument('-rf', '--robot-footprint', default='config/bar_robot.csv', help='Robot footprint csv file')
 parser.add_argument('-no', '--n-obstacles', type=int, default=2, help='Number of obstacles')
 parser.add_argument('-ns', '--n-samples', type=int, default=5, help='Number of sample locations for testing')
@@ -167,7 +168,6 @@ plt.show()
 
 # plot escape animation
 ax1 = plt.subplot(111)
-niter = 10
 i = len(rrt.Path)
 while i >= 0:
     j = 1
@@ -177,7 +177,7 @@ while i >= 0:
         k = 0
     currAngle = rrt.Path[k][j][2]
     currPos = rrt.Path[k][j][:2]
-    # dex = int(currAngle/niter*(len(h)-1))
+    dex = int(currAngle/(2*np.pi)*(len(h)-1))
     ax1.clear()
     ax1.matshow(v[:, :, dex].transpose(), origin='lower', extent=[0, 1, 0, 1], cmap='Greys')
     ax1.add_collection(PatchCollection(copy.copy(h_obs)))
@@ -187,7 +187,32 @@ while i >= 0:
     ax1.plot(*robo.position, color='g', marker='x')
     ax1.set_title(r"$\theta = {0:0.1f}$ rad".format(currAngle))
     ax1.tick_params(top=0, left=0)
+    # ax1.set_xlim(0, 1)
+    # ax1.set_ylim(0, 1)
     plt.pause(2)
+    i -= 1
+plt.show()
+
+# escape shaded map
+ax2 = plt.subplot(111)
+ax2.set_title(r"$\theta = {0:0.1f}$ rad".format(currAngle))
+ax2.add_collection(PatchCollection(copy.copy(h_obs)))
+ax2.tick_params(top=0, left=0)
+ax2.set_xlim(0, 1)
+ax2.set_ylim(0, 1)
+i = len(rrt.Path)
+while i >= 0:
+    j = 1
+    k = i - 1
+    if i == 0:
+        j = 0
+        k = 0
+    currAngle = rrt.Path[k][j][2]
+    currPos = rrt.Path[k][j][:2]
+    robo.set_position(currPos)
+    robo.set_heading(currAngle)
+    ax2.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r', alpha=1-i/(len(rrt.Path)+1)))
+    ax2.plot(*robo.position, color='g', marker='x')
     i -= 1
 plt.show()
 

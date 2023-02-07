@@ -32,7 +32,7 @@ def getDist(pos1, pos2):
 def sampleFree(params):
     '''biased sampling'''
     p = np.random.uniform(params.env.boundary[0:3], params.env.boundary[3:6])
-    i = np.random.random()
+    # i = np.random.random()
     if isinside(params, p):
         return sampleFree(params)
     else:

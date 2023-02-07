@@ -22,7 +22,7 @@ class env():
     def __init__(self, xmin=0, ymin=0, zmin=0, xmax=1, ymax=1, zmax=2*np.pi, resolution=1):
         self.resolution = resolution
         self.boundary = np.array([xmin, ymin, zmin, xmax, ymax, zmax]) 
-        self.start = np.array([.5, .6, .5*np.pi])
+        self.start = np.array([.5, .54, .5*np.pi])
         self.goal = np.array([.5, 0.1, np.pi])
         self.t = 0 # time 
 
