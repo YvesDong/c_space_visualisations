@@ -33,7 +33,7 @@ plt.rc('font', **{'family': 'serif', 'sans-serif': ['Computer Modern Roman']})
 plt.rc('text', usetex=True)
 
 parser = argparse.ArgumentParser(description='Basic visualisation of configuration space for mobile robot')
-parser.add_argument('-nx', type=int, default=40, help='Resolution (n points in each dimension')
+parser.add_argument('-nx', type=int, default=70, help='Resolution (n points in each dimension')
 parser.add_argument('-rf', '--robot-footprint', default='config/bar_robot.csv', help='Robot footprint csv file')
 parser.add_argument('-no', '--n-obstacles', type=int, default=2, help='Number of obstacles')
 parser.add_argument('-ns', '--n-samples', type=int, default=5, help='Number of sample locations for testing')
@@ -134,7 +134,7 @@ for i, ax in enumerate(a2.flat):
 # run rrt
 # p = rrtstar(v, nx)
 # p.run()
-rrt = FMT_star(v, nx, radius = 1, n = 600)
+rrt = FMT_star(v, nx, radius = 1, n = 2000)
 rrt.FMTrun()
 
 # plot RRT optimal path
@@ -169,6 +169,7 @@ plt.show()
 # plot escape animation
 ax1 = plt.subplot(111)
 i = len(rrt.Path)
+ax1.set_aspect('equal', 'box')
 while i >= 0:
     j = 1
     k = i - 1
@@ -187,19 +188,18 @@ while i >= 0:
     ax1.plot(*robo.position, color='g', marker='x')
     ax1.set_title(r"$\theta = {0:0.1f}$ rad".format(currAngle))
     ax1.tick_params(top=0, left=0)
-    # ax1.set_xlim(0, 1)
-    # ax1.set_ylim(0, 1)
-    plt.pause(2)
+    plt.pause(1)
     i -= 1
 plt.show()
 
 # escape shaded map
 ax2 = plt.subplot(111)
-ax2.set_title(r"$\theta = {0:0.1f}$ rad".format(currAngle))
+ax2.set_title(r"escape path")
 ax2.add_collection(PatchCollection(copy.copy(h_obs)))
 ax2.tick_params(top=0, left=0)
 ax2.set_xlim(0, 1)
 ax2.set_ylim(0, 1)
+ax2.set_aspect('equal', 'box')
 i = len(rrt.Path)
 while i >= 0:
     j = 1

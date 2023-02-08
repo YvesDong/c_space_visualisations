@@ -43,7 +43,7 @@ def sampleFree(params):
         return p
 
 # ---------------------- Collision checking algorithms
-def isinside(params, p, thres=.03):
+def isinside(params, p, thres=.005):
     '''see if inside obstacle'''
     oMap = params.oMap
     normp = (p-params.envLowBound) / (params.envUpBound-params.envLowBound) # normalized p
@@ -56,7 +56,9 @@ def isinside(params, p, thres=.03):
     limLow = np.floor(limLow*oMapShape).astype(int)
     limUp = np.floor(limUp*oMapShape).astype(int)
     # print(limLow, limUp)
-
+    if np.prod(limUp-limLow) == 0: # no element in the neighbor
+        return False
+    
     # detect in a neighbor cube
     oMapNeighbor = oMap[limLow[0]:limUp[0],limLow[1]:limUp[1],limLow[2]:limUp[2]]
     if np.amax(oMapNeighbor):
@@ -64,7 +66,7 @@ def isinside(params, p, thres=.03):
 
     return False
 
-def isCollide(params, p1, p2, dist=None):
+def isCollide(params, p1, p2, dist=None, thres=.005):
     '''see if line intersects obstacle'''
     '''specified for expansion in A* 3D lookup table'''
     if dist==None:
@@ -78,7 +80,7 @@ def isCollide(params, p1, p2, dist=None):
     vec = np.asarray(p2) - np.asarray(p1)
     for i in range(nsample+1):
         currp = p1 + i/nsample*vec
-        if isinside(params, currp):
+        if isinside(params, currp, thres=thres):
             return True, dist
     return False, dist
 

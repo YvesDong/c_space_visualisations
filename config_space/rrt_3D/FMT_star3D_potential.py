@@ -23,7 +23,7 @@ from rrt_3D.queue import MinheapPQ
 
 class FMT_star():
 
-    def __init__(self, obstaclemap, nx, radius=.3, n=1000, pot_ratio=.97):
+    def __init__(self, obstaclemap, nx, radius=.3, n=1000, pot_ratio=.98):
         self.env = env()
         self.oMap = obstaclemap
         self.nx = nx
@@ -149,7 +149,7 @@ class FMT_star():
                 Ynear = list(self.Near(self.Vopen, x, rn))
                 # self.Save(set(Ynear), x)
                 ymin = Ynear[np.argmin([self.c[y] + self.get_new_cost(y,x)[0] for y in Ynear])] # DP programming equation
-                collide, _ = isCollide(self, ymin, x)
+                collide, _ = isCollide(self, ymin, x, thres=1/(self.nx-5))
                 if not collide:
                     E.add((ymin, x)) # straight line joining ymin and x is collision free
                     Vopen_new.add(x)
