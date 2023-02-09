@@ -10,8 +10,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import copy
-
-
 import os
 import sys
 
@@ -22,8 +20,7 @@ from rrt_3D.plot_util3D import set_axes_equal, draw_block_list, draw_line, make_
 from rrt_3D.queue import MinheapPQ
 
 class FMT_star():
-
-    def __init__(self, obstaclemap, nx, radius=.3, n=1000, pot_ratio=.98):
+    def __init__(self, obstaclemap, nx, radius=.3, n=200, pot_ratio=.98):
         self.env = env()
         self.oMap = obstaclemap
         self.nx = nx
@@ -49,8 +46,6 @@ class FMT_star():
         self.done = True
         self.Path = []
         self.Parent = {}
-
-
 
     def generateSampleSet(self, n):
         V = set()
@@ -102,22 +97,10 @@ class FMT_star():
             i += 1
         return path
 
-    # def Cost(self, x, y):
-    #     # collide, dist = isCollide(self, x, y)
-    #     # if collide:
-    #     #     return np.inf
-    #     # return dist
-    #     return getDist(x, y)
-
     # TODO: normalization of pot and dis costs
     def Cost(self, node):
         cost_pot = self.c_pot[node]
         cost_dist = self.c_dist[node]
-        # while node.parent:
-        #     cost_pot = max(cost_pot, node[1]) # max in the linked list
-        #     # cost_dis += math.hypot(node.x - node.parent.x, node.y - node.parent.y)
-        #     node = self.Parent[node]
-        # cost_pot -= node.y # max relative height along the path
         cost = cost_pot*self.pot_ratio + cost_dist*(1-self.pot_ratio)
         return cost, cost_pot, cost_dist
 
@@ -137,15 +120,9 @@ class FMT_star():
         ind = 0
         while z != self.xgoal:
             Vopen_new = set()
-            #Nz = self.Near(self.Vunvisited, z, rn)
-            #self.Save(Nz, z)
-            #Xnear = Nz.intersection(self.Vunvisited)
             Xnear = self.Near(self.Vunvisited, z ,rn)
             self.Save(Xnear, z)
             for x in Xnear:
-                #Nx = self.Near(self.V.difference({x}), x, rn)
-                #self.Save(Nx, x)
-                #Ynear = list(Nx.intersection(self.Vopen))
                 Ynear = list(self.Near(self.Vopen, x, rn))
                 # self.Save(set(Ynear), x)
                 ymin = Ynear[np.argmin([self.c[y] + self.get_new_cost(y,x)[0] for y in Ynear])] # DP programming equation
@@ -195,24 +172,17 @@ class FMT_star():
             # generate axis objects
             ax = plt.subplot(111, projection='3d')
             
-            # ax.view_init(elev=0.+ 0.03*initparams.ind/(2*np.pi), azim=90 + 0.03*initparams.ind/(2*np.pi))
-            # ax.view_init(elev=0., azim=90.)
-            ax.view_init(elev=65., azim=60.)
-            ax.dist = 15
-            # ax.view_init(elev=-8., azim=180)
+            # ax.view_init(elev=65., azim=60.)
+            # ax.dist = 15
             ax.clear()
+            ax.set_aspect('equal', 'box')
+            
             # drawing objects
-            # draw_Spheres(ax, self.env.balls)
-            # draw_block_list(ax, self.env.blocks)
-            # if self.env.OBB is not None:
-            #     draw_obb(ax, self.env.OBB)
             draw_block_list(ax, np.array([self.env.boundary]), alpha=0)
             draw_line(ax, edges, visibility=0.75, color='g')
             draw_line(ax, Path, color='r')
-            # if len(V) > 0:
-            #     ax.scatter3D(V[:, 0], V[:, 1], V[:, 2], s=2, color='g', )
-            ax.plot(start[0:1], start[1:2], start[2:], 'go', markersize=7, markeredgecolor='k')
-            ax.plot(goal[0:1], goal[1:2], goal[2:], 'ro', markersize=7, markeredgecolor='k')
+            ax.plot(start[0], start[1], start[2], 'go', markersize=7, markeredgecolor='k')
+            ax.plot(goal[0], goal[1], goal[2], 'ro', markersize=7, markeredgecolor='k')
             # adjust the aspect ratio
             set_axes_equal(ax)
             make_transparent(ax)
@@ -221,9 +191,9 @@ class FMT_star():
             ax.set_axis_off()
             plt.pause(0.0001)
 
-if __name__ == '__main__':
-    A = FMT_star(radius = 1, n = 3000)
-    A.FMTrun()
+# if __name__ == '__main__':
+#     A = FMT_star(radius = 1, n = 3000)
+#     A.FMTrun()
 
 
 

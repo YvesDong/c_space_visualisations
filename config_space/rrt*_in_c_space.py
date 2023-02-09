@@ -70,29 +70,29 @@ for i in range(num_obstacles):
     obstacles.append(p)
 
 # Get some random points and see if they're in the obstacles:
-in_obs, out_obs = poly.PointList([]), poly.PointList([])
-for i in range(200):
-    p = poly.Point(*np.random.uniform(size=2))
-    collision = False
-    for o in obstacles:
-        if o.point_inside(p):
-            collision = True
-            break
-    if collision:
-        in_obs.append(p)
-    else:
-        out_obs.append(p)
+# in_obs, out_obs = poly.PointList([]), poly.PointList([])
+# for i in range(200):
+#     p = poly.Point(*np.random.uniform(size=2))
+#     collision = False
+#     for o in obstacles:
+#         if o.point_inside(p):
+#             collision = True
+#             break
+#     if collision:
+#         in_obs.append(p)
+#     else:
+#         out_obs.append(p)
 
 # plot workspace sampling
-f1, a1 = plt.subplots()
+# f1, a1 = plt.subplots()
 h_obs = []
 for o in obstacles:
     h_obs.append(PlotPolygon(o, color='lightgrey', zorder=1))
-c_obs = PatchCollection(h_obs)
-a1.add_collection(c_obs)
-a1.scatter(*zip(*in_obs), color='r', marker='x')
-a1.scatter(*zip(*out_obs), color='g', marker='.')
-print("Intersect: {0}".format(obstacles[0].intersect(obstacles[1])))
+# c_obs = PatchCollection(h_obs)
+# a1.add_collection(c_obs)
+# a1.scatter(*zip(*in_obs), color='r', marker='x')
+# a1.scatter(*zip(*out_obs), color='g', marker='.')
+# print("Intersect: {0}".format(obstacles[0].intersect(obstacles[1])))
 
 # Load the robot shape
 robo = robot_tools.Robot2D(footprint_file=args.robot_footprint)
@@ -103,14 +103,14 @@ robo = robot_tools.Robot2D(footprint_file=args.robot_footprint)
 robo.set_position((0.25, 0.38))
 robo.get_current_polygon().intersect(obstacles[-1])
 
-x, y, h = np.linspace(0, 1, nx), np.linspace(0, 1, nx), np.linspace(0, 2*np.pi, nx)
+x, y, h = np.linspace(0, 1, nx), np.linspace(0, 1, nx), np.linspace(0, 1, nx)
 v = np.zeros((len(x), len(y), len(h))) # 3D C-space - 1:blocked; 0:free
 for i,xi in enumerate(x):
     for j, yj in enumerate(y):
         robo.set_position((xi, yj))
         for k, hk in enumerate(h):
             in_obs = 0.0
-            robo.set_heading(hk)
+            robo.set_heading(2*np.pi*hk)
             fp = robo.get_current_polygon()
             for o in obstacles:
                 if fp.intersect(o):
@@ -125,37 +125,46 @@ for i, ax in enumerate(a2.flat):
     dex = int(i*0.25*(len(h)-1))
     ax.matshow(v[:, :, dex].transpose(), origin='lower', extent=[0, 1, 0, 1], cmap='Greys')
     ax.add_collection(PatchCollection(copy.copy(h_obs)))
-    robo.set_heading(h[dex])
+    robo.set_heading(2*np.pi*h[dex])
     ax.add_artist(PlotPolygon(robo.get_current_polygon(), facecolor='r'))
     ax.plot(*robo.position, color='g', marker='x')
-    ax.set_title(r"$\theta = {0:0.1f}$".format(h[dex]*180/np.pi))
+    ax.set_title(r"$\theta = {0:0.1f} rad$".format(2*np.pi*h[dex]))
     ax.tick_params(top=0, left=0)
 
 # run rrt
 # p = rrtstar(v, nx)
 # p.run()
-rrt = FMT_star(v, nx, radius = 1, n = 2000)
+rrt = FMT_star(v, nx, radius=.3, n=200)
 rrt.FMTrun()
 
 # plot RRT optimal path
 # TODO: wrong overlapping - https://stackoverflow.com/questions/13932150/matplotlib-wrong-overlapping-when-plotting-two-3d-surfaces-on-the-same-axes
 fig = plt.figure(figsize=(10, 10))
 ax = fig.add_subplot(111, projection='3d')
-
 edges = []
+paths = []
 for i in rrt.Parent:
-    edges.append([i, rrt.Parent[i]])
+    edgeList = list(rrt.Parent[i])
+    edgeList[2] *= 2*np.pi
+    edges.append([i, tuple(edgeList)])
+for i in range(len(rrt.Path)):
+    p = []
+    for j in range(2):
+        pathList = list(rrt.Path[i][j])
+        pathList[2] *= 2*np.pi
+        p.append(pathList)
+    paths.append([tuple(p[0]), tuple(p[1])])
 start = rrt.env.start
 goal = rrt.env.goal
 draw_line(ax, edges, visibility=0.75, color='g')
-draw_line(ax, rrt.Path, color='r')
-ax.plot3D(start[0], start[1], start[2], 'go', markersize=7, markeredgecolor='k')
-ax.plot3D(goal[0], goal[1], goal[2], 'ro', markersize=7, markeredgecolor='k')
+draw_line(ax, paths, color='r')
+ax.plot3D(start[0], start[1], 2*np.pi*start[2], 'go', markersize=7, markeredgecolor='k')
+ax.plot3D(goal[0], goal[1], 2*np.pi*goal[2], 'ro', markersize=7, markeredgecolor='k')
 
 # plot obstacle surface
 # TODO: donut instead of cube in RRT
-verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], h[1]-h[0]))
-ax_lims = [[0, x[-1]], [0, y[-1]], [0, h[-1]]]
+verts, faces, normals, values = measure.marching_cubes(v, spacing=(x[1]-x[0], y[1]-y[0], 2*np.pi*(h[1]-h[0])))
+ax_lims = [[0, x[-1]], [0, y[-1]], [0, 2*np.pi*h[-1]]]
 ax.scatter3D(verts[:, 0], verts[:, 1], verts[:, 2], edgecolor='k')
 # ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], cmap='Spectral', lw=1)
 ax.set_xlim(ax_lims[0])
@@ -164,6 +173,7 @@ ax.set_zlim(ax_lims[2])
 ax.set_xlabel(r'$x_c$')
 ax.set_ylabel(r'$y_c$')
 ax.set_zlabel(r"$\theta (rad)$")
+# ax.set_aspect('equal', 'box')
 plt.show()
 
 # plot escape animation
@@ -176,7 +186,7 @@ while i >= 0:
     if i == 0:
         j = 0
         k = 0
-    currAngle = rrt.Path[k][j][2]
+    currAngle = 2*np.pi*rrt.Path[k][j][2]
     currPos = rrt.Path[k][j][:2]
     dex = int(currAngle/(2*np.pi)*(len(h)-1))
     ax1.clear()
@@ -207,7 +217,7 @@ while i >= 0:
     if i == 0:
         j = 0
         k = 0
-    currAngle = rrt.Path[k][j][2]
+    currAngle = 2*np.pi*rrt.Path[k][j][2]
     currPos = rrt.Path[k][j][:2]
     robo.set_position(currPos)
     robo.set_heading(currAngle)
